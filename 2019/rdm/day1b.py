@@ -10,10 +10,10 @@ with open(filename, 'r') as content_file:
   for line in content_file.readlines():
     modules.append(int(line))
 
-print modules
+print 'Found: ' + str(len(modules)) + ' modules.'
 
 total_fuel = 0
-while not len(modules) == 0:
+while modules:
   mass = modules.pop()
   fuel = mass / 3 - 2
   if fuel > 0:
