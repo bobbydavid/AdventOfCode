@@ -117,9 +117,11 @@ if part_name == 'a':
   print('total_energy=%d' % total_energy(bodies))
 elif part_name == 'b':
   sys.stdout.write('answer:')
+  sys.stdout.flush()
   for d in range(3):
     result = analyze_dimension(bodies, d)
     sys.stdout.write(' ' + str(result))
+    sys.stdout.flush()
   sys.stdout.write('\n')
   # To find the actual answer, I plugged these into an online LCM calculator.
 else:
