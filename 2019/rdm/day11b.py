@@ -163,7 +163,9 @@ class Spaceship:
 
   # Reads the color at a particular location.
   def color_at(self, coords):
-    return self.hull_color.setdefault(coords, self.BLACK)
+    if coords in self.hull_color:
+      return self.hull_color[coords]
+    return self.BLACK
 
 
   # Receives the next instruction.
