@@ -1,13 +1,8 @@
-import math
 import sys
-import operator
+from os import system
 import copy
-from functools import partial
 import collections
 import itertools
-import threading
-import time
-from Queue import Queue
 from computer import Computer
 
 Point = collections.namedtuple('Point', ['x', 'y'])
@@ -38,19 +33,22 @@ class Grid:
     print '\n'
 
 class ArcadeGame:
-  def __init__(self, intcode, columns, rows):
+  def __init__(self, intcode, columns, rows, show_game=False):
     self.computer = Computer(intcode, self, self)
     self.board = Grid(rows, columns)
     self.input_buffer = []
     self.mutex = False
     self.tiles_of_type = {} # maps tiles to points where they live
     self.score = 0
+    self.show_game = show_game
     self.bar = None
     self.ball = None
   
   def get(self):
     if self.bar and self.ball:
-      self.board.render()
+      if self.show_game:
+        _ = system('clear')
+        self.board.render()
       if self.bar.x > self.ball.x:
         return -1
       if self.bar.x < self.ball.x:
@@ -102,9 +100,10 @@ def main():
 
   rows = int(sys.argv[2])
   cols = int(sys.argv[3])
+  show_game = eval(sys.argv[4]) if len(sys.argv) == 5 else False
   # (b) set address 0 to 2 to play for free...
   intcode[0] = 2
-  game = ArcadeGame(intcode, rows, cols)
+  game = ArcadeGame(intcode, rows, cols, show_game)
   print 'Initialized game.'
   game.run()
   # (a) ==> 173
