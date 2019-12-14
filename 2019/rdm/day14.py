@@ -11,6 +11,10 @@ if len(sys.argv) < 2:
   sys.exit("forgot data file name: python day1.py <data file>")
 filename = sys.argv[1]
 
+if len(sys.argv) < 3:
+  sys.exit("2nd argument should be 'a' or 'b'")
+question_part = sys.argv[2]
+
 
 class Ingredient():
   @staticmethod
@@ -122,10 +126,14 @@ def produce(available, element, amount_needed):
     amount_available = available[element]
     if amount_available >= amount_needed:
       available[element] -= amount_needed
+      print('%s: used up %d of %d available' % (
+          element, amount_needed, amount_available))
       return 0  # No cost in ore, we used available supplies.
     else:
       # Used everything we have, and we still need more.
       amount_needed -= available.pop(element)
+      print('%s: using up %d available, still need %d' % (
+          element, amount_available, amount_needed))
   # Produce what we don't have.
   assert amount_needed > 0
   equation = equation_map[element]
@@ -135,8 +143,10 @@ def produce(available, element, amount_needed):
   for ingredient in equation.inputs:
     ingredient_amount_needed = ingredient.amount * batches
     ore_needed += produce(available, ingredient.name, ingredient_amount_needed)
+  amount_produced = equation.output.amount * batches
   # Add any extras for future use.
-  leftovers = (equation.output.amount * batches) - amount_needed
+  leftovers = amount_produced - amount_needed
+  print('%s: produced %d, had %d leftover' % (element, amount_produced, leftovers))
   assert leftovers >= 0
   if leftovers > 0:
     if not element in available:
@@ -149,7 +159,8 @@ def produce(available, element, amount_needed):
 def is_possible(fuel_count, ore_count):
   ore_needed = produce({}, 'FUEL', fuel_count)
   return ore_needed <= ore_count
-  
+
+
 
 # Finds the maximum amount of fuel we can make with this available ore.
 def max_fuel_possible(available_ore):
@@ -170,5 +181,11 @@ def max_fuel_possible(available_ore):
       return lower_bound
 
 
-m = max_fuel_possible(1000000000000)
-print('max fuel possible = %d' % m)
+if question_part == 'a':
+  ore = produce({}, 'FUEL', 1)
+  print('ore needed: %d' % ore)
+elif question_part == 'b':
+  m = max_fuel_possible(1000000000000)
+  print('max fuel possible = %d' % m)
+else:
+  sys.exit('unknown part %s' % question_part)
