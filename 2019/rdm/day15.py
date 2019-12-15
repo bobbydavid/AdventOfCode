@@ -1,4 +1,5 @@
 import intcode
+import time
 import copy
 import sys
 import threading
@@ -96,7 +97,7 @@ def print_grid(grid, robot_coords = None):
         c = grid[coords]
       sys.stdout.write(c)
     sys.stdout.write('\n')
-  
+  time.sleep(0.03)
 
 class Robot():
   def __init__(self, input_program):
@@ -181,6 +182,7 @@ class Solver():
 
 
   def explore_location_dfs(self):
+    self.redraw()
     initial_coords = self.robot.coords
     for d in DIRECTIONS:
       if not self.robot.explored(d):
@@ -195,6 +197,8 @@ class Solver():
     frontiers = [initial_location]
     visited = set()
     distance = 0
+    if target == '?':
+      tmp = copy.deepcopy(self.robot.grid)
     while True:
       for f in frontiers:
         assert f not in visited
@@ -202,6 +206,8 @@ class Solver():
         c = self.robot.grid[f]
         if c == target:
           return (True, distance)
+        if target == '?':
+          tmp[f] = 'O'
 
       new_frontiers = set()
 
@@ -215,6 +221,15 @@ class Solver():
 
       frontiers = new_frontiers
       distance += 1
+
+      if target == 'O':
+        tmp = copy.deepcopy(self.robot.grid)
+        for f in frontiers:
+          tmp[f] = '*'
+      os.system('clear')
+      print_grid(tmp)
+
+
   
   
   # Solves part A
