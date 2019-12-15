@@ -86,8 +86,6 @@ class Grid:
 class Robot:
   def __init__(self, intcode, rows, columns, out_pickle_file=None, in_pickle_file=None):
     self.computer = Computer(intcode, self, self)
-    self.c_input = Queue()
-    self.c_ouput = Queue()
     # Starts facing up.
     self.current = Point(columns/2, rows/2)
     self.initial = self.current
@@ -98,7 +96,6 @@ class Robot:
       self.room = Grid(rows, columns)
     self.room.set(self.initial,'o')
     self.last_move = (0, 0)
-    self.new_move = 2
     self.move_count = 0
     self.MOVE = {1: (0, -1),
                  2: (0, 1),
@@ -113,7 +110,7 @@ class Robot:
                          self.current.y + move.y)
     self.room.set(self.current, 'D')
     self.move_count += 1
-
+  
   def get(self):
     m = random.randint(1,4)
     x, y = self.MOVE[m]
@@ -129,12 +126,10 @@ class Robot:
 
   def put(self, value):
     status = value
-    self.status_2 = 0
     if status == 0:
       # need to restore position, and set the wall.
       self.move(Point(-self.last_move.x, -self.last_move.y), '#')
     elif status == 2:
-      self.status_2 += 1
       print 'Found the oxygen system!'
       self.room.set(self.current, 'X')
       if self.out_pickle_file:
@@ -175,12 +170,9 @@ def Oxygenize(grid):
     grid.render()
     time.sleep(0.1)
     minutes += 1
-    if (minutes % 1000) == 0:
-      print 'Minutes: ', minutes
-    
+  # (b) 342
   grid.render()
   print 'Minutes: ', minutes
-  
 
 def main():
   if (len(sys.argv) < 5):
