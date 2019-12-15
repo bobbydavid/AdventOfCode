@@ -91,7 +91,6 @@ def main():
   f.close()
 
   total_ore = 1000000000000
-  #TestB()
   if (filename.startswith('test')):
     Test(filename, data, total_ore)
 
@@ -100,7 +99,7 @@ def main():
   ore_for_1_fuel = c.ComputeIngredients()
   print 'We need %d units of ORE to produce 1 FUEL.' % ore_for_1_fuel
 
-  # (b) ===> 
+  # (b) ==> 8193614 
   c = Chemistry(data)
   max_fuel = c.ComputeMaxFuel(total_ore)
   print '1 Trillion ORE produces %d FUEL' % max_fuel
