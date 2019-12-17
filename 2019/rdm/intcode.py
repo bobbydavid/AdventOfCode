@@ -15,12 +15,10 @@ class SimpleQueue():
   def get(self):
     x = self.q.popleft()
     assert type(x) is int
-    print('about to return %s' % x)
     return x
 
   def put(self, x):
     assert type(x) is int
-    print('storing %s' % x)
     self.q.append(x)
 
   def empty(self):
