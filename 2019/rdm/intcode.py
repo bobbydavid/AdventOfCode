@@ -99,6 +99,15 @@ class Computer():
     while not self.stopped:
       self.run_next_instruction()
 
+  def run_async(self):
+    t = threading.Thread(target=self.run)
+    t.daemon = True
+    t.start()
+    self.async_thread = t
+
+  def wait(self):
+    self.async_thread.wait()
+
   # Runs one instruction.
   def run_next_instruction(self):
     i = self.instruction_pointer
