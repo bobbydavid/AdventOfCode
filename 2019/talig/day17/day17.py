@@ -22,13 +22,14 @@ class Grid:
     self.grid = []
     for y in range(rows):
       self.grid.append(['.'] * columns)
-    print 'Initialized grid with: ', len(self.grid), ' rows X ', len(self.grid[0]), ' columns'
+    print 'Initialized grid with:', len(self.grid), 'rows X', len(self.grid[0]), 'columns'
 
   def set(self, point, value):
-    c = self.get(point)
     self.grid[point.y][point.x] = value
   
   def get(self, point):
+    if point.y >= self.rows or point.y < 0 or point.x >= self.columns or point.x<0:
+      return '.'
     return self.grid[point.y][point.x]
 
   def render(self):
@@ -71,13 +72,17 @@ def live_feed(computer, grid):
   out_q = computer.OutputQueue()
   cols = 0
   rows = 0
-  while rows < 32:
-    c = out_q.get()
-    if c == 10: # '\n'
+  last_2_chrs = []
+  while last_2_chrs != ['\n','\n']:
+    c = chr(out_q.get())
+    last_2_chrs.append(c)
+    if len(last_2_chrs) == 3:
+      last_2_chrs.pop(0)
+    if c == '\n':
       rows += 1
       cols = 0
     else:
-      grid.set(Point(cols, rows), chr(c))
+      grid.set(Point(cols, rows), c)
       cols +=1
 
 def get_scaffolding(computer, grid):
@@ -130,7 +135,7 @@ def main():
   computer.daemon = True
   # Let's see what we have here. 32 rows, 40 cols
   # (A) 3336
-  grid = Grid(32, 40)
+  grid = Grid(50, 50)
   get_scaffolding(computer, grid)
   # (B) Walk the scaffolding : 597517
   intcode[0]=2
