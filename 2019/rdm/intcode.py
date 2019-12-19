@@ -2,6 +2,7 @@ from collections import defaultdict
 from collections import deque
 import curses
 import copy
+import string
 import itertools
 import sys
 import threading
@@ -37,6 +38,8 @@ class SimpleQueue():
 # Write to output_queue using put(x)
 class Computer():
   def __init__(self, tape, input_queue, output_queue):
+    if isinstance(tape, str):
+      tape = self._load_tape(tape)
     self.tape = defaultdict(int, enumerate(tape))
     self.input_queue = input_queue
     self.output_queue = output_queue
@@ -45,6 +48,11 @@ class Computer():
     self.stopped = False
 
     self.debug_level = 0
+
+  def _load_tape(self, filename):
+    with open(filename, 'r') as contents:
+      return [int(x) for x in contents.read().split(',') if x]
+    
 
   # Returns the mode for the Nth argument.
   def _get_mode(self, i, n):
