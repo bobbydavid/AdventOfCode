@@ -11,6 +11,15 @@ import tty
 from Queue import Queue
 import termios
 
+#
+# Longest-first search:
+# 4576, k, a, u, z, p, t, b, c, e, x, d, w, o, v, s, l, h, m, j, q, f, n, r, g, y
+# 4572, k, a, u, p, t, b, c, e, x, z, d, w, o, v, s, l, h, m, j, q, f, n, r, g, y
+#
+# Shortest-first search:
+# 4532, s, p, z, b, x, e, c, k, u, v, o, w, d, a, t, l, f, q, j, m, h, n, r, g, y
+# 4528, s, p, z, b, x, e, c, k, a, u, v, o, w, d, t, l, f, q, j, m, h, n, r, g, y 
+#
 
 
 
@@ -81,7 +90,7 @@ def precalculate_all_destinations(grid):
   nodes = copy.deepcopy(keys)
   nodes.append('@')
   for source in nodes:
-    _dest_map[source] = []
+    values = []
     for sink in nodes:
       if sink == '@' or source == sink:
         continue
@@ -89,13 +98,16 @@ def precalculate_all_destinations(grid):
       candidates = old_find_candidate_moves(grid, keys_set, coords, target=sink)
       assert len(candidates) == 1, '%s %s %s' % (candidates, source, sink)
       sink_coords, dist_from_source, sink, doors = candidates[0]
-      _dest_map[source].append( (sink, doors, dist_from_source, sink_coords) )
-  """
+      values.append( (sink, doors, dist_from_source, sink_coords) )
+    values.sort(key=lambda x : x[2], reverse=True)
+    _dest_map[source] = values
   print('...done.')
+  """
   for source, sinks in _dest_map.iteritems():
     print('SOURCE: ' + source)
     for sink in sinks:
       print('  SINK: ' + repr(sink))
+  sys.exit(1)
   """
 
 def has_all_needed_keys(doors, keys):
