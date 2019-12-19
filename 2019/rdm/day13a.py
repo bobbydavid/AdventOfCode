@@ -147,7 +147,7 @@ for i in range(0, len(out_data), 3):
 bcount = 0
 for y in range(max_y + 1):
   for x in range(max_x + 1):
-    c = ' ' 
+    c = ' '
     if (x, y) in tiles:
       i = tiles[(x, y)]
       if i == 0:
@@ -165,7 +165,7 @@ for y in range(max_y + 1):
         raise Exception(' unknown tile %d' % i)
     sys.stdout.write(c)
   sys.stdout.write('\n')
-    
+
 
 
 print(bcount)

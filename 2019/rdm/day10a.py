@@ -30,7 +30,7 @@ def count_astroids(space, root_coords):
       coords = (x - root_coords[0], y - root_coords[1])
       if coords != (0, 0) and not is_occluded(seen, coords):
         seen.append(coords)
-        
+
   return len(seen)
 
 

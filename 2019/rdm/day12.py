@@ -58,7 +58,7 @@ elif data_name == 'test2':
   iteration_count = 100
 else:
   raise Exception('Unknown input: %s' % data_name)
-  
+
 print('Initial data:')
 for b in bodies:
   print(b)
@@ -80,7 +80,7 @@ def apply_gravity(bodies):
 def apply_velocity(bodies):
   for b in bodies:
     b.pos = [sum(nums) for nums in zip(b.pos, b.vel)]
-          
+
 def total_energy(bodies):
   return sum(b.energy() for b in bodies)
 
@@ -88,7 +88,7 @@ def total_energy(bodies):
 def advance_time(bodies):
   apply_gravity(bodies)
   apply_velocity(bodies)
-  
+
 
 def calc_state(bodies):
   state = []

@@ -27,7 +27,7 @@ def check_coords(x, y):
   else:
     raise Exception('bad output: %s' % out)
 
-  
+
 
 
 def print_part_a():
@@ -45,7 +45,7 @@ def print_part_a():
         count += 1
         if l is None:
           l = x
-          s_to_skip = x - 2 
+          s_to_skip = x - 2
       if c == '.' and r is None and l is not None:
         r = x - 1
     if r is None:
@@ -67,7 +67,7 @@ def solve_part_a():
 def dodraw(y, l, r):
   w = r + 1 - l
   print('%3d:'%y + '.' * (l - 1) + '#' * w + ' %s'%((l,r),))
-      
+
 
 def solve_part_b(sq, draw = False):
   last_sq = []
@@ -114,7 +114,7 @@ def solve_part_b(sq, draw = False):
       sleigh_r = sleigh_x + sq - 1
       assert sleigh_r <= prev_r
       assert sleigh_r <= r
-          
+
       print(sleigh_x * 10000 + sleigh_y)
       return sleigh_x * 10000 + sleigh_y
 

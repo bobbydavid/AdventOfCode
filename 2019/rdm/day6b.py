@@ -43,6 +43,6 @@ def run():
           new_frontiers.append(exit)
     frontiers = new_frontiers
 
-    
+
 print run()
-    
+

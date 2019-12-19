@@ -65,7 +65,7 @@ def find_overlaps(vert_set, horiz_set):
       y = h[0]
       if x >= h[1] and x <= h[2] and y >= v[1] and y <= v[2]:
         overlap_points.append((x, y))
-      
+
 
 
 #find_parallel_overlaps(up1, up2, True)
@@ -78,8 +78,8 @@ print overlap_points
 
 distances = [abs(x[0]) + abs(x[1]) for x in overlap_points]
 print min(distances)
-  
-  
+
+
 
 
 

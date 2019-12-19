@@ -16,7 +16,7 @@ def is_valid(digits):
         return True
       chain_length = 1  # start of a new chain
   return chain_length == 2
-    
+
 
 def is_ascending(num):
   digits = [int(d) for d in str(num)]
@@ -42,7 +42,7 @@ def increment(digits):
 
 def get_next(digits):
   increment(digits)
-  has_duplicate = len(digits) != len(set(digits)) 
+  has_duplicate = len(digits) != len(set(digits))
   if not is_valid(digits):
     return get_next(digits)
 
@@ -64,16 +64,16 @@ while not is_ascending(num):
 # now use faster incrementing to find first valid number.
 if not is_valid([int(d) for d in str(num)]):
   num = next(num)
-  
+
 
 count = 0
 while num <= hi:
   count += 1
   num = next(num)
-  
+
 print count
 
 
-      
 
-  
+
+

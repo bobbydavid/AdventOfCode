@@ -18,7 +18,7 @@ def increment(digits, i):
 
 def get_next(digits):
   increment(digits, len(digits)-1)
-  has_duplicate = len(digits) != len(set(digits)) 
+  has_duplicate = len(digits) != len(set(digits))
   if not has_duplicate:
     return get_next(digits)
 
@@ -36,7 +36,7 @@ while num <= hi:
   count += 1
   # print num
   num = next(num)
-  
+
 print count
 
 """
@@ -48,6 +48,6 @@ print next(12345)
 print next(12344)
 """
 
-      
 
-  
+
+

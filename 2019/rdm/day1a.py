@@ -17,4 +17,4 @@ with open(filename, 'r') as content_file:
 
   print 'total fuel: ' + str(total_fuel)
 
-  
+

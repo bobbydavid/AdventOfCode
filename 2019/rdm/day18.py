@@ -18,7 +18,7 @@ import termios
 #
 # Shortest-first search:
 # 4532, s, p, z, b, x, e, c, k, u, v, o, w, d, a, t, l, f, q, j, m, h, n, r, g, y
-# 4528, s, p, z, b, x, e, c, k, a, u, v, o, w, d, t, l, f, q, j, m, h, n, r, g, y 
+# 4528, s, p, z, b, x, e, c, k, a, u, v, o, w, d, t, l, f, q, j, m, h, n, r, g, y
 #
 
 
@@ -115,7 +115,7 @@ def has_all_needed_keys(doors, keys):
     if string.lower(door) not in keys:
       return False
   return True
-    
+
 def find_candidate_moves(grid, keys, initial_coords):
   source = read_grid(grid, initial_coords)
   assert source in _dest_map, source
@@ -168,13 +168,13 @@ def old_find_candidate_moves(grid, keys, initial_coords, target=None):
   return candidates
 
 
-  
+
 
 def showkeys(keys):
   keys = list(keys)
   keys.sort()
   return '%s (%d)' % (''.join(keys), len(keys))
-          
+
 
 INFINITY = float("inf")
 
@@ -218,9 +218,9 @@ def recursive_search_for_solution(params, path, keys, coords, to_here):
   return best_soln
 
 
-  
-      
-      
+
+
+
 
 
 

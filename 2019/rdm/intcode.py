@@ -52,7 +52,7 @@ class Computer():
   def _load_tape(self, filename):
     with open(filename, 'r') as contents:
       return [int(x) for x in contents.read().split(',') if x]
-    
+
 
   # Returns the mode for the Nth argument.
   def _get_mode(self, i, n):

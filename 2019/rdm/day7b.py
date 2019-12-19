@@ -104,7 +104,7 @@ max_thrust = 0
 best_order = []
 for order in itertools.permutations(range(5, 10)):
   # Inputs and outputs are the same queues, and are circular.
-  output_queues = [queue.Queue() for x in order] 
+  output_queues = [queue.Queue() for x in order]
   input_queues = output_queues[-1:] + output_queues[:-1]
 
   # Each input gets the data from the permutation.

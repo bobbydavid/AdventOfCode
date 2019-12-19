@@ -110,7 +110,7 @@ def validate_part_b(digits_str, full_solution):
     full_output.append(output)
     print('pass')
   print('all pass')
-  
+
   print('testing part b solver...')
   for output, (phases, input_str, _) in zip(full_output, input_pairs):
     # Only run on the 2nd half of the input.

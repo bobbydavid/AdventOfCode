@@ -61,7 +61,7 @@ for equation in equations:
 
 
 # List of all chemicals.
-chemicals = set() 
+chemicals = set()
 for equation in equations:
   chemicals.add(equation.output.name)
   for i in equation.inputs:

@@ -28,7 +28,7 @@ class Spaceship:
   PAINT = 0
   TURN = 1
   MODE_COUNT = 2
-  
+
   def __init__(self):
     # Location is (x, y) == (across, up)
     self.robot_location = (0, 0)

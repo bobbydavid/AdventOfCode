@@ -156,14 +156,14 @@ class Robot():
     if c == 'O':
       self.oxygen_coords = self.coords
     return True
-      
-    
+
+
 
 class Solver():
   def __init__(self, input_data):
     self.robot = Robot(input_data)
 
-  
+
   # Lets you move around manually.
   def explore_manually(self):
     while True:
@@ -230,8 +230,8 @@ class Solver():
       print_grid(tmp)
 
 
-  
-  
+
+
   # Solves part A
   def solve(self):
     # First, explore the entire map using DFS.

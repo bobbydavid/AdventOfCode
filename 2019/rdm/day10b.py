@@ -70,8 +70,8 @@ def analyze_astroids(space, root_coords, target, draw_grid = None):
         return orig_coords
     if empty_list_count == len(astroids):
       raise Exception('Ran out of astroids to explode before reaching %d' % target)
-    
-    
+
+
   #initial_coords = (29, 28)  # for day10.data
   #initial_coords = (8,3)  # for day10_test3.data
   #initial_coords = (11,13)  # for day10_test4.data
