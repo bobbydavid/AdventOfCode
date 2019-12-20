@@ -69,9 +69,9 @@ def analyze_teleporters(ports):
   assert "AA" in found, found
   assert "ZZ" in found, found
   return (link_map, found["AA"], found["ZZ"])
- 
 
-        
+
+
 def solve_bfs(grid, start, end, links):
   frontiers = [start]
   dist = 0
@@ -104,9 +104,9 @@ def solve_bfs(grid, start, end, links):
   if end_dist is None:
     raise Exception('could not find path')
   return end_dist
-      
 
-    
+
+
 def solve_part_a():
   grid = aoc.load_file_as_grid(FILENAME)
   aoc.print_grid(grid)
@@ -177,7 +177,7 @@ def analyze_teleporters_part_b(ports):
   for coords, orig_name in ports.iteritems():
     name = orig_name.upper()
     is_grow = (name == orig_name)
-    
+
     if name in found:
       other_coords, other_is_grow = found[name]
       assert other_coords is not None
@@ -203,7 +203,7 @@ def analyze_teleporters_part_b(ports):
   return (shrink_links, grow_links, found["AA"][0], found["ZZ"][0])
 
 
-        
+
 def solve_bfs_part_b(grid, start, end, shrink_links, grow_links):
   frontiers = [(start, 0)]
   dist = 0
@@ -250,7 +250,7 @@ def solve_bfs_part_b(grid, start, end, shrink_links, grow_links):
   if end_dist is None:
     raise Exception('could not find path')
   return end_dist
-      
+
 def solve_part_b():
   grid = aoc.load_file_as_grid(FILENAME)
   aoc.print_grid(grid)

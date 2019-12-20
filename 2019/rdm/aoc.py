@@ -7,7 +7,7 @@ def load_file_as_grid(filename):
       line = line[:-1]
       grid.append([c for c in line])
   return grid
-        
+
 
 def read_grid(grid, coords, default=None):
   x = coords[0]
@@ -24,6 +24,6 @@ def read_grid(grid, coords, default=None):
 def print_grid(grid):
   rows = [''.join([c for c in row]) for row in grid]
   print('\n'.join(rows))
-        
+
 def add_coords(a, b):
   return (a[0]+b[0], a[1]+b[1])
