@@ -183,7 +183,13 @@ class Params():
     members = [d for d in dir(self) if not d.startswith('__')]
     return '<%s>' % ', '.join(['%s=%s' % (m, getattr(self, m)) for m in members])
 
+# cache key is "%s:%s" % (current_key, keys_in_hand) -> remaining distance
+_cache = {}
 def recursive_search_for_solution(params, path, keys, coords, to_here):
+  cache_key = '%s:%s' % (path[-1], showkeys(keys))
+  if cache_key in _cache:
+    #print('Reusing cached value: %s=%s' % (cache_key, _cache[cache_key]))
+    return to_here + _cache[cache_key]
   candidates = find_candidate_moves(params.grid, keys, coords)
   if False:  # Show debug?
     this_key = read_grid(params.grid, coords)
@@ -198,10 +204,6 @@ def recursive_search_for_solution(params, path, keys, coords, to_here):
     assert key not in keys
 
     next_dist = to_here + distance
-    if  next_dist >= params.best_known:
-      #print('Giving up, since %d is worse than best known' % next_dist)
-      continue
-
     if len(keys) + 1 < params.max_keys:
       keys.add(key)
       path.append(key)
@@ -215,6 +217,7 @@ def recursive_search_for_solution(params, path, keys, coords, to_here):
       params.best_known = min(params.best_known, soln)
       print('SOLUTION: %d, %s' % (soln, ', '.join(path)))
     best_soln = min(best_soln, soln)
+  _cache[cache_key] = best_soln - to_here
   return best_soln
 
 
@@ -236,12 +239,14 @@ def solve_part_a(grid):
   params.best_known = INFINITY
   min_steps = recursive_search_for_solution(params, ['@'], set(), start_coords, 0)
   print('min_steps = %s' % min_steps)
+  assert min_steps != 4414
+  return min_steps
 
 
 
 
 
 
-solve_part_a(input_grid)
+min_steps = solve_part_a(input_grid)
 
 
