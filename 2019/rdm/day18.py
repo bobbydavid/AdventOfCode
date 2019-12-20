@@ -20,6 +20,10 @@ import termios
 # 4532, s, p, z, b, x, e, c, k, u, v, o, w, d, a, t, l, f, q, j, m, h, n, r, g, y
 # 4528, s, p, z, b, x, e, c, k, a, u, v, o, w, d, t, l, f, q, j, m, h, n, r, g, y
 #
+# Best order:
+# ['p', 'k', 'a', 'z', 't', 'b', 'c', 'e', 'x', 'd', 'w', 'o', 'v', 'u', 's', 'l', 'h', 'm', 'j', 'q', 'f', 'n', 'r', 'g', 'y', 'i']
+
+BEST_ORDER = ['p', 'k', 'z', 'a', 'b', 't', 'x', 'e', 'c', 's', 'u', 'v', 'o', 'w', 'd', 'l', 'f', 'q', 'j', 'm', 'h', 'n', 'r', 'g', 'y', 'i']
 
 
 
@@ -99,7 +103,7 @@ def precalculate_all_destinations(grid):
       assert len(candidates) == 1, '%s %s %s' % (candidates, source, sink)
       sink_coords, dist_from_source, sink, doors = candidates[0]
       values.append( (sink, doors, dist_from_source, sink_coords) )
-    values.sort(key=lambda x : x[2], reverse=True)
+    values.sort(key=lambda x : x[2], reverse=False)
     _dest_map[source] = values
   print('...done.')
   """
@@ -109,6 +113,13 @@ def precalculate_all_destinations(grid):
       print('  SINK: ' + repr(sink))
   sys.exit(1)
   """
+
+def find_distance(src, sink):
+  values = _dest_map[src]
+  for key, doors, dist, coords in values:
+    if key == sink:
+      return dist
+  raise Exception('%s not found in %s: %s' % ((src, sink), values, _dest_map))
 
 def has_all_needed_keys(doors, keys):
   for door in doors:
@@ -189,7 +200,9 @@ def recursive_search_for_solution(params, path, keys, coords, to_here):
   cache_key = '%s:%s' % (path[-1], showkeys(keys))
   if cache_key in _cache:
     #print('Reusing cached value: %s=%s' % (cache_key, _cache[cache_key]))
-    return to_here + _cache[cache_key]
+    cached = _cache[cache_key]
+    #print(cached)
+    return (cached[0] + to_here, cached[1])
   candidates = find_candidate_moves(params.grid, keys, coords)
   if False:  # Show debug?
     this_key = read_grid(params.grid, coords)
@@ -198,8 +211,9 @@ def recursive_search_for_solution(params, path, keys, coords, to_here):
     for c in candidates:
       print('    %s %s, dist=%d, doors=%s' % (c[2], c[0], c[1], c[3]))
   best_soln = INFINITY
+  best_order = None
   for candidate in candidates:
-    #print('examining: coords=%s, distance=%d, key=%s' % candidate)
+    #print('examining: coords=%s, distance=%d, key=%s %s' % candidate)
     next_coords, distance, key, _ = candidate
     assert key not in keys
 
@@ -207,18 +221,22 @@ def recursive_search_for_solution(params, path, keys, coords, to_here):
     if len(keys) + 1 < params.max_keys:
       keys.add(key)
       path.append(key)
-      soln = recursive_search_for_solution(
+      soln, this_order = recursive_search_for_solution(
           params, path, keys, next_coords, next_dist)
       assert path[-1] == key
       path.pop()
       keys.remove(key)
     else:
       soln = next_dist
-      params.best_known = min(params.best_known, soln)
-      print('SOLUTION: %d, %s' % (soln, ', '.join(path)))
+      this_order = []
+      #print('SOLUTION: %d, %s' % (soln, ', '.join(path)))
+    if soln < best_soln:
+      best_soln = soln
+      best_order = [key] + copy.deepcopy(this_order)
     best_soln = min(best_soln, soln)
-  _cache[cache_key] = best_soln - to_here
-  return best_soln
+  _cache[cache_key] = (best_soln - to_here, best_order)
+  #print('Caching[%s] = %s' % (cache_key, _cache[cache_key]))
+  return best_soln, best_order
 
 
 
@@ -237,16 +255,27 @@ def solve_part_a(grid):
   params.grid = grid
   params.max_keys = count_keys(grid)
   params.best_known = INFINITY
-  min_steps = recursive_search_for_solution(params, ['@'], set(), start_coords, 0)
+  min_steps, best_order = recursive_search_for_solution(
+      params, path=['@'], keys=set(), coords=start_coords, to_here=0)
   print('min_steps = %s' % min_steps)
-  assert min_steps != 4414
-  return min_steps
+  print(best_order)
+  #assert min_steps != 4414
+  return min_steps, best_order
 
 
 
 
 
 
-min_steps = solve_part_a(input_grid)
+min_steps, best_order = solve_part_a(input_grid)
+best_order = ['@'] + best_order
+steps = 0
+for i in range(len(best_order) - 1):
+  start = best_order[i]
+  end = best_order[i + 1]
+  delta = find_distance(start, end)
+  steps += delta
+  print('%s -> %s, + %d = %d' % (start, end, delta, steps))
+
 
 
