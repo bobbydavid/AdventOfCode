@@ -119,6 +119,16 @@ def solve_part_a():
 
 
 
+class Teleporter():
+  def __init__(self, name, s, g):
+    self.name = name
+    self.shrink = s
+    self.grow = g
+
+  def __repr__(self):
+    return '%s<%s->%s>' % (self.name, self.shrink, self.grow)
+
+
 
 
 
@@ -164,10 +174,10 @@ def parse_teleporters_part_b(grid):
   return ports
 
 
-# Input is map from coords to teleporter.
+# Input is map from coords to teleporter door.
 #
-# Output is a teleporter link map (coords to coords) and start/end:
-# output format: (shrink_links, grow_links, start, end)
+# Output format: (shrink_links, grow_links, start, end)
+# Note: links are coords -> Teleporter
 def analyze_teleporters_part_b(ports):
   shrink_links = {}
   grow_links = {}
@@ -190,8 +200,9 @@ def analyze_teleporters_part_b(ports):
       grow_coords = coords if is_grow else other_coords
       shrink_coords = other_coords if is_grow else coords
 
-      shrink_links[shrink_coords] = shrink_coords
-      grow_links[grow_coords] = grow_coords
+      t = Teleporter(name, shrink_coords, grow_coords)
+      grow_links[shrink_coords] = t
+      shrink_links[grow_coords] = t
 
       found[name] = None
     else:
@@ -205,50 +216,87 @@ def analyze_teleporters_part_b(ports):
 
 
 def solve_bfs_part_b(grid, start, end, shrink_links, grow_links):
-  frontiers = [(start, 0)]
-  dist = 0
+  frontiers = [(start, 0, 0, [])]
+  paused_frontiers = []
+  max_size = 0
   end_dist = None
+  best_path = None
   visited = {}
-  visited[0] = {start: dist}
+  visited[0] = {start: 0}
   while end_dist is None and frontiers:
-    #print('%d: %s' % (dist, frontiers))
-
-    dist += 1
+    #print('%s' % (frontiers,))
     new_frontiers = []
-    for coords, size in frontiers:
+    for coords, size, dist, path in frontiers:
       choices = []
       # Find dots we can walk to.
       for d in ((0, -1), (1, 0), (0, 1), (-1, 0)):
         n_coords = aoc.add_coords(coords, d)
         if read_grid(grid, n_coords) == '.':
-          choices.append((n_coords, size))
+          choices.append((n_coords, size, None))
       # Peek through teleporters.
       if coords in shrink_links:
-        choices.append((shrink_links[coords], size - 1))
+        t = shrink_links[coords]
+        choices.append((t.shrink, size - 1, t))
       if coords in grow_links:
-        choices.append((grow_links[coords], size + 1))
+        t = grow_links[coords]
+        choices.append((t.grow, size + 1, t))
       # Each choice becomes a new frontier, unless it sucks.
-      for coords, size in choices:
-        promising = True
+      for coords, size, teleporter in choices:
+        new_dist = dist + 1
         # Check this map and every one closer.
-        step = -1 if size < 0 else 1
-        for i in range(0, size + step, step):
-          if i not in visited:
-            visited[i] = {}
-          vmap = visited[i]
+        if size not in visited:
+          visited[size] = {}
+        vmap = visited[size]
+        if coords in vmap and vmap[coords] < new_dist:
+          continue
+        vmap[coords] = new_dist
 
-          if coords in vmap:
-            if vmap[coords] <= dist:
-              promising = False
-              break
-        if not promising:
-          break
-      if promising:
-        visited[size][coords] = dist
-        new_frontiers.append((coords, size))
+        # New info for this frontier.
+        new_path = copy.copy(path)
+        if teleporter is None:
+          new_path.append(coords)
+        else:
+          new_path.append((teleporter, size))
+        if coords == end and size == 0:
+          # Found the exit.
+          end_dist = new_dist
+          best_path = new_path
+        else:
+          # Need to keep searching.
+          if size > 0:
+            # Disallow getting larger than the max.
+            continue
+          elif abs(size) <= max_size:
+            f = new_frontiers
+          else:
+            #print('pausing frontier: %s' % (coords,))
+            f = paused_frontiers
+          f.append((coords, size, new_dist, new_path))
     frontiers = new_frontiers
+    if not frontiers and end_dist is None:
+      max_size += 1
+      print('expanding search to %d' % max_size)
+      frontiers = paused_frontiers
+      paused_frontiers = []
   if end_dist is None:
     raise Exception('could not find path')
+  print 'best path: '
+  prev_t = Teleporter("AA", None, None)
+  skipped = 0
+  steps = 0
+  for p in best_path:
+    if len(p) == 2 and isinstance(p[0], Teleporter):
+      t, size = p
+      print('walk from %s to %s (%d steps)' % (prev_t.name, t.name, skipped))
+      print('Recurse into level %d through %s (1 step)' % (size, t.name))
+      steps += skipped + 1
+      skipped = 0
+      prev_t = t
+    else:
+      skipped += 1
+  steps += skipped
+  print('walk from %s to finish (%d steps)' % (prev_t.name, skipped))
+  print('total: %d' % steps)
   return end_dist
 
 def solve_part_b():
@@ -259,8 +307,8 @@ def solve_part_b():
   ports = parse_teleporters_part_b(grid)
   shrink_links, grow_links, start, end = analyze_teleporters_part_b(ports)
   print('start=%s, end=%s' % (start, end))
-  #print('shrink=%s' % shrink_links)
-  #print('grow=%s' % grow_links)
+  print('shrink=%s' % shrink_links)
+  print('grow=%s' % grow_links)
   dist = solve_bfs_part_b(grid, start, end, shrink_links, grow_links)
   print('dist=%d' % dist)
 
