@@ -34,6 +34,7 @@ class SimpleQueue():
 
 # IntOp computer.
 #
+# `tape` may either be a list of integers or a filename to read.
 # Read from input_queue using get()
 # Write to output_queue using put(x)
 class Computer():
@@ -46,6 +47,7 @@ class Computer():
     self.instruction_pointer = 0
     self.relative_base = 0
     self.stopped = False
+    self.async_thread = None
 
     self.debug_level = 0
 
@@ -114,7 +116,8 @@ class Computer():
     self.async_thread = t
 
   def wait(self):
-    self.async_thread.wait()
+    if self.async_thread:
+      self.async_thread.join()
 
   # Runs one instruction.
   def run_next_instruction(self):
