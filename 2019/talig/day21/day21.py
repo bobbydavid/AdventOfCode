@@ -64,15 +64,15 @@ def run_hull(computer):
                 'NOT B T',
                 'OR T J',
                 'NOT C T',
-                'OR T J', # J = !A || !B || !C
+                'OR T J',  # J = !A || !B || !C
                 'NOT H T',
                 'NOT T T',
                 'OR F T',
-                'OR I T', # T = H || F || I
+                'OR I T',  # T = H || F || I
                 'AND T J', # J =  (!A || !B || !C) && (H || F || I)
                 'NOT E T',
                 'NOT T T',
-                'OR H T', # T = E || H
+                'OR H T',  # T = E || H
                 'AND T J',
                 'AND D J',
                 'RUN',
