@@ -136,26 +136,35 @@ WALK
 
 def solve_part_b():
   program = """
-NOT T T
-NOT T T
-AND A T
-AND B T
-AND C T
-NOT T T  #
+OR H T
+OR F T
+OR I T
 
+OR E J
+OR H J
+
+AND J T
+
+# D is safe to land on
 AND D T
 
-OR T J
-WALK
-AND E T
-AND F T
-AND G T
-NOT T T
-AND H T
+# Reset J to be True
+NOT A J
+AND A J
+NOT J J
+
+
+# Detect any holes
+AND A J
+AND B J
+AND C J
+NOT J J
+
+AND T J
 
 RUN
-  """
-  try_solution(program, None)
+"""
+  try_solution(program, 1143351187)
 
 
 arg = 'WALK'
