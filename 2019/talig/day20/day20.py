@@ -2,6 +2,7 @@ import sys
 from os import system
 import copy
 import collections
+import math
 
 
 class Point:
@@ -28,7 +29,7 @@ class Point:
     return self.x != o.x or self.y != o.y
 
   def dist(self, o):
-    return abs(o.y - self.y) + abs(o.x - self.x)
+    return math.sqrt((o.y - self.y)**2 + (o.x - self.x)**2)
 
 DIRECTIONS = [Point(0, 1), Point(1, 0), Point(0, -1), Point(-1, 0)]
 INF = 90000
@@ -40,9 +41,10 @@ class Node:
     self.edges = []
     self.dist = INF
     self.prev = None
+    self.level = 0
 
   def __repr__(self):
-    return '%s %d' % (self.name, self.dist)
+    return '%d: %s %d' % (self.level, self.name, self.dist)
 
   def render(self):
     return '%s %s => %s' % (self.name, self.location, str(self.edges))
@@ -54,19 +56,21 @@ class Edge:
   def __init__(self, node, distance=None):
     self.next = node
     self.distance = distance
+    self.leveling = 0
 
   def __repr__(self):
     return '%s: %s (%d)' % (self.next.name, self.next.location, self.distance)
 
 class Graph:
-  def __init__(self, grid):
+  def __init__(self, grid, level=0):
+    self.level = level
     self.nodes_by_location = {}
     self.nodes_by_name = {}
     self.edges = []
     self.grid = copy.deepcopy(grid)
     self._build_graph()
 
-  def add_node(self, node):
+  def add_node(self, node, center):
     # No surprises.
     if self.nodes_by_name.has_key(node.name):
       a = self.nodes_by_name[node.name]
@@ -151,7 +155,7 @@ class Graph:
           if node == None or visited.has_key(node.id()):
             continue
           visited[node.id()] = 1
-          self.add_node(node)
+          self.add_node(node, center)
 
     for node in self.nodes_by_location.values():
       distances = self._bfs_grid(node.location)
@@ -160,19 +164,20 @@ class Graph:
         if d > 0:
           node.edges.append(Edge(self.nodes_by_location[loc], d))
 
-  def shortest_path(self, start_name):
-    # For AA and ZZ only this is unambiguous.
-    start = self.nodes_by_name[start_name]
+  def shortest_path(self, start, nodes=None):
     start.dist = 0
-    queue = [v for v in self.nodes_by_location.values()]
+    queue = nodes
+    if not nodes:
+      queue = [v for v in self.nodes_by_location.values()]
     while queue:
       v = min(queue, key=lambda x: x.dist)
       queue.remove(v)
       for e in v.edges:
-        alt = v.dist + e.distance
-        if alt < e.next.dist:
-          e.next.dist = alt
-          e.next.prev = v
+        if e.next:
+          alt = v.dist + e.distance
+          if alt < e.next.dist:
+            e.next.dist = alt
+            e.next.prev = v
 
 def get_grid(filename):
   tunnels = []  
@@ -189,20 +194,79 @@ def expect(expected, real):
   else:
     print 'Nope! Expected', expected, 'got', real
 
+# (a)
 def get_moves(filename):
   grid = get_grid(filename)
   graph = Graph(grid)
-  graph.shortest_path('AA')
+  # For AA and ZZ only this is unambiguous.
+  start = graph.nodes_by_name['AA']
+  graph.shortest_path(start)
   return graph.nodes_by_name['ZZ'].dist
+
+# (b)
+def get_layered_moves(filename):
+  grid = get_grid(filename)
+  center = Point(len(grid[0])/2, len(grid)/2)
+  graph = Graph(grid)
+  all_nodes_all_levels = []
+  levels = []
+  for l in range(len(graph.nodes_by_name)):
+    g = copy.deepcopy(graph)
+    levels.append(g)
+    g.level = l
+    for v in g.nodes_by_location.values():
+      v.level = l
+      all_nodes_all_levels.append(v)
+    
+  # Now duplicate the graph multiple times, and modify the edges to go from
+  # nodes in level i to those above an below, respectively.
+  for l in range(len(levels)):
+    g_l = levels[l]
+    # Adding the next level graph.
+    for v in g_l.nodes_by_location.values():
+      for e in v.edges:
+        level = l
+        if v.name == e.next.name:
+          if e.next.location.dist(center) > v.location.dist(center):
+            # Going outwardly.
+            level += 1
+          else:
+            # Going inwards.
+            level -= 1
+        if level < 0 or level >= len(levels):
+          #print 'Out of bounds level: ', level, e.next.name
+          e.next = None
+          e.distance = INF
+          continue
+        if level != l:
+          #print 'Connecting %s at level %d to %s at level %d' % (v.name, l, e.next.name, level)
+          e.next = levels[level].nodes_by_location[str(e.next.location)]
+          e.next.prev = v
+    
+  start = levels[0].nodes_by_name['AA']
+  levels[0].shortest_path(start, all_nodes_all_levels)
+
+  cur = levels[0].nodes_by_name['ZZ']
+  path = [cur]
+  while cur and cur.name != 'AA':
+    cur = cur.prev
+    path.insert(0, cur)
+  return levels[0].nodes_by_name['ZZ'].dist
 
 def test():
   tests = {'test1.data': 23,
-           'test2.data': 58,
-          }
+           'test2.data': 58}
   
   for t in tests:
     expect(tests[t], get_moves(t))
 
+  b_tests = {'test1.data': 26,
+             'test_b.data': 396,
+            }
+  for t in b_tests:
+    expect(b_tests[t], get_layered_moves(t))
+      
+  
 def main():
   if (len(sys.argv) < 2):
     test()
@@ -211,7 +275,10 @@ def main():
     sys.exit(1)
 
   moves = get_moves(sys.argv[1])
-  print moves, 'moves are required to get from AA to ZZ'  
+  print moves, 'moves are required to get from AA to ZZ in (a)'  
+
+  layered_moves = get_layered_moves(sys.argv[1])
+  print layered_moves, 'moves are required to get from AA to ZZ in (b)'  
 
 if __name__== "__main__":
   main()
