@@ -48,10 +48,9 @@ def index_deal(n, inverse, size, index):
   return (index * n) % size
 
 def index_cut(n, size, index):
-  n = -n 
   #print 'cut %d: Index %d moves to %d' % (n, index, ((size - n) % size + index) %size)
   # 0 --> size - n, 1 --> n + 1, etc
-  return ((size - n) % size + index) % size
+  return (index-n) % size
 
 def parse(filename, stack_size, index=False):
   f = open(filename)
@@ -69,7 +68,7 @@ def parse(filename, stack_size, index=False):
         command = index_stack if index else new_stack
     if words[0] == 'cut':
       cutX = int(words[-1])
-      command = partial(index_cut, cutX) if index else partial(cut, cutX)
+      command = partial(index_cut, -cutX) if index else partial(cut, cutX)
     if index:
       # Because we're looking for the card that ENDS UP in 2020, we should do this
       # in reverse.
