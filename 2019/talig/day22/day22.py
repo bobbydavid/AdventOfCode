@@ -5,28 +5,9 @@ import collections
 import itertools
 import re
 import math
+from random import randint
 
 NUMBER = '(-?\d+)'
-
-# Part (a) - straightforward
-def new_stack(stack):
-  stack.reverse()
-  return stack
-
-def cut(n, stack):
-  return stack[n:] + stack[:n]
-
-def deal(n, stack):
-  new_stack = [-1]*len(stack)
-  for j in range(len(stack)):
-    new_stack[j*n % len(stack)] = stack[j]
-  return new_stack
-
-# Part (b) - index mapping.
-def index_stack(size, index):
-  # Reverse order
-  #print 'reverse: Index %d moves to %d' % (index, (size - 1 - index) % size)
-  return (size - 1 - index) % size
 
 def gcd_extended(a,b):
   if a == 0:
@@ -38,76 +19,75 @@ def gcd_extended(a,b):
   y = x1
   return gcd, x, y; 
 
-def modInverse(a, m): 
+# https://www.geeksforgeeks.org/multiplicative-inverse-under-modulo-m/
+def mod_inverse(a, m): 
   g,x,y = gcd_extended(a,m)
   assert g == 1
   return x % m
 
-def index_deal(n, inverse, size, index):
-  #print 'deal %d => %d: Index %d moves to %d' % (inverse, n, index, (index* n) % size)
-  return (index * n) % size
-
-def index_cut(n, size, index):
-  #print 'cut %d: Index %d moves to %d' % (n, index, ((size - n) % size + index) %size)
-  # 0 --> size - n, 1 --> n + 1, etc
-  return (index-n) % size
-
-def parse(filename, stack_size, index=False):
+def parse(filename, deck_size):
   f = open(filename)
-  commands = []
-  for line in f.readlines():
+  lines = f.readlines()
+  f.close()
+  m = 1
+  b = 0
+  for line in lines:
     line.strip()
     words = line.split(' ')
     command = None
     if words[0] == 'deal':
-      m = re.match(NUMBER, words[-1])
-      if m:
-        dealX = int(m.group(0))
-        command = partial(index_deal, modInverse(dealX, stack_size), dealX) if index else partial(deal, dealX)
+      match = re.match(NUMBER, words[-1])
+      if match:
+        dealX = int(match.group(0))
+        m *= dealX
+        b *= dealX
       else:
-        command = index_stack if index else new_stack
+        m *= -1
+        b = deck_size - 1 - b
     if words[0] == 'cut':
       cutX = int(words[-1])
-      command = partial(index_cut, -cutX) if index else partial(cut, cutX)
-    if index:
-      # Because we're looking for the card that ENDS UP in 2020, we should do this
-      # in reverse.
-      commands.insert(0, command)
-    else:
-      commands.append(command)
-  f.close()
-  return commands
+      m *= 1
+      b -= cutX
+  return m % deck_size, b % deck_size
 
 # (a)
-def shuffle(filename, stack_size):
-  commands = parse(filename, stack_size)
-  stack = range(stack_size) # Initialize factory ordering.
-  for c in commands:
-    stack = c(stack)
-  return stack
+def shuffle(filename, deck_size):
+  return parse(filename, deck_size)
 
 # (b)
-def unshuffle(filename, stack_size, iterations, final_pos):
-  commands = parse(filename, stack_size, index=True)
-  pos = final_pos
-  poses = {pos: [0]}
-  for i in xrange(iterations):
-    for c in commands:
-      pos = c(stack_size, pos)
-      if poses.get(pos, None):
-        poses[pos].append(i)
-      else:
-        poses[pos] = [i]
-  return pos # AKA initial position, AKA value.
+def unshuffle(filename, deck_size):
+  m, b = shuffle(filename, deck_size)
+  inv_m = mod_inverse(m, deck_size)
+  return inv_m, (-b * inv_m) % deck_size
 
-def get_iterations_no_cycle(first, second, iterations):
-  # Subtract the first encounter from number of iterations, we'd need to run those
-  # just to get into the loop.
-  # Then mod by the size of the loop (second-first), to know how far we need to go
-  # into the loop.
-  extra = (iterations - first) % (second - first)
-  # Return first + extra
-  return first + extra
+# Common stuff.
+def apply_iteratively(m, b, deck_size, iterations, pos):
+  iter_m = power_of_m(m, iterations, deck_size)
+  return (iter_m * pos + b*((iter_m -1) * mod_inverse(m-1, deck_size))) % deck_size
+
+def get_array(m, b, deck_size, iterations=1):
+  res = [-1] * deck_size
+  for x in range(deck_size):
+    res[apply_iteratively(m,b,deck_size, iterations, x)] = x
+  return res
+
+def power_of_m(m, iterations, deck_size):
+  # bin(x) == '0b{bin representation}'. 
+  # Strips and '0b' and makes it a list.
+  binary = list(bin(iterations)[2:])
+  # Reverse to start from the 0th power and go up.
+  binary.reverse()
+  power_m = 1
+  total_m = 1
+  for i in range(len(binary)):
+    if i == 0:
+      power_m = m
+    else:
+      power_m = (power_m * power_m) % deck_size
+    if binary[i] == '1':
+      total_m = (total_m * power_m) % deck_size
+  return total_m
+
 
 def expect(expected, real):
   if expected == real:
@@ -123,15 +103,17 @@ def test():
           }
   # (a)
   for t in tests:
-    shuffled_stack = shuffle(t, 10)
-    expect(tests[t], shuffled_stack)
+    m, b = shuffle(t, 10)
+    res = get_array(m,b, 10)
+    expect(tests[t], res)
 
-  # (b)
+  # (b) 
   for t in tests:
-    res = [-1] * 10
+    m, b = unshuffle(t, 10)
     deck = range(10)
     for i in deck:
-      x = unshuffle(t, 10, 1, i)
+      # Given the resulting position, what's the original position ( == value).
+      x = apply_iteratively(m,b, 10, 1, i)
       res[i] = x
     expect(tests[t], res)
 
@@ -143,21 +125,24 @@ def main():
     sys.exit(1)
 
   # (a) ==> 1510
-  shuffled = shuffle(sys.argv[1], 10007)
-  print('Card 2019 is in position:', shuffled.index(2019))
+  deck_size = 10007
+  m,b = shuffle(sys.argv[1], deck_size)
+  res = get_array(m,b, deck_size)
+  print('Card 2019 is in position:', res.index(2019))
 
-  # (b) ==> 
-  # 30743101856679 is too high :/ 
   deck_size = 119315717514047
   iterations = 101741582076661
   index = 2020
 
-  # 2020 is not a stationary point here, sadly.
-  # And I couldn't find a cycle in this thing :(
-  #positions = unshuffle(sys.argv[1], deck_size, iterations, index)
-  #print('Loopy? ', positions)
-  #card_2020 = shuffle_b(sys.argv[1], deck_size, get_iterations_no_cycle(first, second, iterations), index)
-  #print 'Card 2020 is in position:', card_2020
+  m, b = unshuffle(sys.argv[1], deck_size) 
+  print 'Curiousity: %d * x + %d' % (m, b)
+  # (b) ==>  10307144922975
+  # Note: This only works if all the numbers are co-prime.
+  # So for examples of deck size 10, it's not always going to work.
+  # Note that you can't divide in modulo space, so you must use the
+  # modulo inverse of (m-1).
+  card_2020 = apply_iteratively(m, b, deck_size, iterations, index)
+  print 'Card 2020 is in position:', card_2020
   
  
 if __name__== "__main__":
