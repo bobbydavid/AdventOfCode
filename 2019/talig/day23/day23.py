@@ -128,6 +128,7 @@ def main():
   router.run_all()
   y = router.join_all()
   print('Got y %d twice' % y)
+  # Part (a) ==> 24106 , part (b) ==> 17895
  
 if __name__== "__main__":
   main()
