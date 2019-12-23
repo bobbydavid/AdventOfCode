@@ -34,6 +34,8 @@ class NicInputQueue():
         v = -1
     if v != -1:
       self.router.notify_activity(self.addr)
+    else:
+      time.sleep(0.01) # Try to reduce spin-waiting.
     return v
 
   def is_idle(self):
