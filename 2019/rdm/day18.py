@@ -1,5 +1,6 @@
 import intcode
 from collections import defaultdict
+from collections import deque
 import string
 import time
 import copy
@@ -30,215 +31,172 @@ BEST_ORDER = ['p', 'k', 'z', 'a', 'b', 't', 'x', 'e', 'c', 's', 'u', 'v', 'o', '
 filename = 'day18.data'
 if len(sys.argv) > 1:
   filename = sys.argv[1]
-input_grid = []
+input_grid = {}
 with open(filename, 'r') as contents:
-  input_grid = [[c for c in row.strip()
-      ] for row in contents.read().strip().split('\n')]
-
-def print_grid(grid, overlays = [], overlay_c = '*'):
-  if overlays:
-    overlays = set(overlays)
-  output = ''
-  for y, row in enumerate(grid):
-    output_row = []
-    for x, c in enumerate(row):
-      if (x, y) in overlays:
-        c = overlay_c
-      output_row.append(c)
-    output += ''.join(output_row) + '\n'
-  print('%s\n' % output)
-  time.sleep(0.1)
+  for y, row in enumerate(contents.readlines()):
+    for x, c in enumerate(row.strip()):
+      input_grid[(x,y)] = c
 
 
-def find_keys(grid):
-  keys = []
-  for row in grid:
-    for c in row:
-      if is_key(c):
-        keys.append(c)
-  return keys
 
+def print_grid(grid):
+  max_x = max(x for x, _ in grid.keys())
+  max_y = max(y for _, y in grid.keys())
+  out = []
+  for y in range(max_y + 1):
+    for x in range(max_x + 1):
+      out.append(grid[(x, y)])
+    out.append('\n')
+  print ''.join(out)
 
-def count_keys(grid):
-  return len(find_keys(grid))
-
-
-def search_for(grid, needle):
-  for y, row in enumerate(grid):
-    for x, c in enumerate(row):
-      if c == needle:
-        return (x, y)
-  return None
-
-def is_door(c):
-  return ord(c) >= ord('A') and ord(c) <= ord('Z')
 
 def is_key(c):
-  return ord(c) >= ord('a') and ord(c) <= ord('z')
+  return c >= 'a' and c <= 'z'
+
+
+def is_door(c):
+  return c >= 'A' and c <= 'Z'
+
+
+def have_all_keys(doors, keys):
+  for door in doors:
+    assert is_door(door)
+    key_needed = door.lower()
+    if key_needed not in keys:
+      return False
+  return True
+
+
+def find_start(grid):
+  for (x, y), c in grid.items():
+    if c == '@':
+      return (x, y)
+
+
+# Returns a map from a key to its coordinates.
+def find_keys(grid):
+  key_map = {}
+  for (x, y), c in grid.items():
+    if is_key(c):
+      key_map[c] = (x, y)
+  return key_map
+
+
+def merge_strings(strs):
+  sorted_strs= list(strs)
+  sorted_strs.sort()
+  return ''.join(sorted_strs)
+
 
 def add_coords(a, b):
   return (a[0] + b[0], a[1] + b[1])
 
 
-def read_grid(grid, coords):
-  return grid[coords[1]][coords[0]]
+# Represents a path between two locations.
+class Path():
+  def __init__(self, start, end, distance, doors):
+    self.start = start
+    self.end = end
+    self.distance = distance
+    self.doors = doors
 
-
-# Maps from a key to all other.
-# Value is (key, doors, dist, destination_coords)
-_dest_map = {}
-def precalculate_all_destinations(grid):
-  print('precalculating...')
-  keys = find_keys(grid)
-  keys_set = set(keys)
-  nodes = copy.deepcopy(keys)
-  nodes.append('@')
-  for source in nodes:
-    values = []
-    for sink in nodes:
-      if sink == '@' or source == sink:
-        continue
-      coords = search_for(grid, source)
-      candidates = old_find_candidate_moves(grid, keys_set, coords, target=sink)
-      assert len(candidates) == 1, '%s %s %s' % (candidates, source, sink)
-      sink_coords, dist_from_source, sink, doors = candidates[0]
-      values.append( (sink, doors, dist_from_source, sink_coords) )
-    values.sort(key=lambda x : x[2], reverse=False)
-    _dest_map[source] = values
-  print('...done.')
-  """
-  for source, sinks in _dest_map.iteritems():
-    print('SOURCE: ' + source)
-    for sink in sinks:
-      print('  SINK: ' + repr(sink))
-  sys.exit(1)
-  """
-
-def find_distance(src, sink):
-  values = _dest_map[src]
-  for key, doors, dist, coords in values:
-    if key == sink:
-      return dist
-  raise Exception('%s not found in %s: %s' % ((src, sink), values, _dest_map))
-
-def has_all_needed_keys(doors, keys):
-  for door in doors:
-    if string.lower(door) not in keys:
-      return False
-  return True
-
-def find_candidate_moves(grid, keys, initial_coords):
-  source = read_grid(grid, initial_coords)
-  assert source in _dest_map, source
-  candidates = []
-  for key, doors, dist, sink_coords in _dest_map[source]:
-    if not has_all_needed_keys(doors, keys):
-      continue
-    if key in keys:
-      continue
-    candidates.append( (sink_coords, dist, key, doors) )
-  return candidates
-
-
-
-# Returns a list of candidate moves in format
-# (dest_coords, distance_from_initial_cords, whats_there, doors_crossed)
-def old_find_candidate_moves(grid, keys, initial_coords, target=None):
-  frontiers = [(initial_coords, [])]
-  visited = {}
-  distance = 0
-  candidates = []
-
-  visited[initial_coords] = distance
-  while frontiers:
-    #print_grid(grid, frontiers, str(distance))
-    distance += 1
-    new_frontiers = []
-    for f, doors in frontiers:
-      for direction in [(1, 0), (0, 1), (-1, 0), (0, -1)]:
-        neighbor_coords = add_coords(f, direction)
-        if neighbor_coords in visited:
-          continue
-        c = read_grid(grid, neighbor_coords)
-        if c == '#':
-          continue
-        if is_door(c):
-          if string.lower(c) not in keys:
-            continue
-          doors.append(c)
-        if c == target or (is_key(c) and not c in keys):
-          # Found a candidate move.
-          candidates.append( (neighbor_coords, distance, c, doors) )
-          if target is not None:
-            return candidates
-          continue
-        #assert c == '.' or is_key(c), 'c=%s' % c
-        new_frontiers.append( (neighbor_coords, list(doors)) )
-        visited[neighbor_coords] = distance
-    frontiers = list(new_frontiers)
-  return candidates
-
-
-
-
-def showkeys(keys):
-  keys = list(keys)
-  keys.sort()
-  return '%s (%d)' % (''.join(keys), len(keys))
-
-
-INFINITY = float("inf")
-
-class Params():
   def __repr__(self):
-    members = [d for d in dir(self) if not d.startswith('__')]
-    return '<%s>' % ', '.join(['%s=%s' % (m, getattr(self, m)) for m in members])
-
-# cache key is "%s:%s" % (current_key, keys_in_hand) -> remaining distance
-_cache = {}
-def recursive_search_for_solution(params, path, keys, coords, to_here):
-  cache_key = '%s:%s' % (path[-1], showkeys(keys))
-  if cache_key in _cache:
-    #print('Reusing cached value: %s=%s' % (cache_key, _cache[cache_key]))
-    cached = _cache[cache_key]
-    #print(cached)
-    return (cached[0] + to_here, cached[1])
-  candidates = find_candidate_moves(params.grid, keys, coords)
-  if False:  # Show debug?
-    this_key = read_grid(params.grid, coords)
-    print('From %s %s dist = %d, keys = %s:' % (
-        this_key, coords, to_here, showkeys(keys)))
-    for c in candidates:
-      print('    %s %s, dist=%d, doors=%s' % (c[2], c[0], c[1], c[3]))
-  best_soln = INFINITY
-  best_order = None
-  for candidate in candidates:
-    #print('examining: coords=%s, distance=%d, key=%s %s' % candidate)
-    next_coords, distance, key, _ = candidate
-    assert key not in keys
-
-    next_dist = to_here + distance
-    if len(keys) + 1 < params.max_keys:
-      keys.add(key)
-      path.append(key)
-      soln, this_order = recursive_search_for_solution(
-          params, path, keys, next_coords, next_dist)
-      assert path[-1] == key
-      path.pop()
-      keys.remove(key)
-    else:
-      soln = next_dist
-      this_order = []
-      #print('SOLUTION: %d, %s' % (soln, ', '.join(path)))
-    if soln < best_soln:
-      best_soln = soln
-      best_order = [key] + copy.deepcopy(this_order)
-    best_soln = min(best_soln, soln)
-  _cache[cache_key] = (best_soln - to_here, best_order)
-  #print('Caching[%s] = %s' % (cache_key, _cache[cache_key]))
-  return best_soln, best_order
+    return '%s -> %s (%s) doors: %s' % (self.start, self.end, self.distance, merge_strings(self.doors))
 
 
+class Frontier():
+  def __init__(self, coords, distance, doors=set()):
+    self.coords = coords
+    self.distance = distance
+    self.doors = doors
+
+  def adjacent(self, new_coords):
+    return Frontier(new_coords, self.distance + 1, copy.copy(self.doors))
+
+
+# Finds the distance from the start coords to every key.
+# Returns a map from key to distance.
+def calc_distances(grid, start_coords):
+  dist = 0
+
+  paths = []
+  start = grid[start_coords]
+
+
+  visited = set([start_coords])
+  frontiers = deque()
+  frontiers.append(Frontier(start_coords, 0))
+  while frontiers:
+    frontier = frontiers.popleft()
+
+    # Process our current location.
+    c = grid[frontier.coords]
+    if is_key(c):
+      paths.append(Path(start, c, frontier.distance, frontier.doors))
+
+    if is_door(c):
+      frontier.doors.add(c)
+
+    # Queue up the unvisited neighbors of this location to be processed.
+    for direction in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+      neighbor_coords = add_coords(frontier.coords, direction)
+      neighbor = grid[neighbor_coords]
+      if neighbor == '#' or neighbor_coords in visited:
+        continue
+      visited.add(neighbor_coords)
+      frontiers.append(frontier.adjacent(neighbor_coords))
+
+  return paths
+
+
+# Returns a map of paths, keyed by (start,end).
+def find_all_paths(grid, start_coords):
+  starts = list(find_keys(grid).values())
+  starts.append(find_start(grid))
+
+  edges = {}
+  for start_coords in starts:
+    paths = calc_distances(grid, start_coords)
+    start = grid[start_coords]
+    edges[start] = paths
+  return edges
+
+
+
+
+# Returns the shortest path to collect all keys, starting at `coords`,
+# and assuming we already are holding `keys`.
+#
+#
+# The cache is keyed by the start location and the keys we have.
+def find_min_steps(grid, edges, cache, loc, keys):
+  cache_key = '%s|%s' % (loc, merge_strings(keys))
+  if cache_key in cache:
+    return cache[cache_key]
+
+  relevant_paths = []
+  for path in edges[loc]:
+    if have_all_keys(path.doors, keys) and path.end not in keys:
+      relevant_paths.append(path)
+
+  if not relevant_paths:
+    # This should only happen if we have all of the keys.
+    # The answer is 0: we don't have to travel at all because we already have
+    # all the keys.
+    assert len(find_keys(grid)) == len(keys), '%s\n%s' % (keys, find_keys(grid))
+    return 0
+
+  min_dist = float("inf")
+  for path in relevant_paths:
+    assert path.end not in keys
+    keys.add(path.end)
+    dist = path.distance + find_min_steps(grid, edges, cache, path.end, keys)
+    keys.remove(path.end)
+    if dist < min_dist:
+      min_dist = dist
+
+  cache[cache_key] = min_dist
+  return min_dist
 
 
 
@@ -247,35 +205,12 @@ def recursive_search_for_solution(params, path, keys, coords, to_here):
 
 def solve_part_a(grid):
   print_grid(grid)
-  start_coords = search_for(grid, '@')
+  start_coords = find_start(grid)
+  edges = find_all_paths(grid, start_coords)
 
-  precalculate_all_destinations(grid)
+  cache = {}
+  steps = find_min_steps(grid, edges, cache, '@', set())
+  print(steps)
 
-  params = Params()
-  params.grid = grid
-  params.max_keys = count_keys(grid)
-  params.best_known = INFINITY
-  min_steps, best_order = recursive_search_for_solution(
-      params, path=['@'], keys=set(), coords=start_coords, to_here=0)
-  print('min_steps = %s' % min_steps)
-  print(best_order)
-  #assert min_steps != 4414
-  return min_steps, best_order
-
-
-
-
-
-
-min_steps, best_order = solve_part_a(input_grid)
-best_order = ['@'] + best_order
-steps = 0
-for i in range(len(best_order) - 1):
-  start = best_order[i]
-  end = best_order[i + 1]
-  delta = find_distance(start, end)
-  steps += delta
-  print('%s -> %s, + %d = %d' % (start, end, delta, steps))
-
-
+solve_part_a(input_grid)
 
