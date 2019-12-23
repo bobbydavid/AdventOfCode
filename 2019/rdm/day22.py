@@ -1,4 +1,5 @@
 import aoc
+import random
 import math
 import sys
 import copy
@@ -144,36 +145,6 @@ def calc_exponent(m, k, total):
 
   cache = {}
   return recursive_calc_exponent(cache, m, k, total)
-  """
-  # Map from n -> m^n
-  cache = {}
-  # Gets a value from the cache (or adds if not present).
-  # Returns m^n
-  def get_exp(n):
-    if n in cache:
-      return cache[n]
-
-    if n == 0:
-      v = 1
-    elif n == 1:
-      v = m
-    else:
-      factors = get_factors_of_2(n)
-      v = 1
-      for f in factors:
-        v *= get_exp(int(math.log(f)/math.log(2)))
-        v = v % pos_inv
-      cache[n] = v
-    return v
-
-  # m^k = m^(1*a0 + 2*a1 + 4*a2 + ... + 2^x*ax)
-  factors = get_factors_of_2(k)
-  result = 1
-  for factor in factors:
-    result *= get_exp(factor)
-    result = result % pos_inv
-  return result
-  """
 
   
 
@@ -364,13 +335,21 @@ def solve_part_b():
   print('SOLVED part b: %s' % answer)
   assert answer > 50952079323838  # I guessed wrong.
   assert answer < 108967639669667  # I guessed wrong again.
+  assert answer == 77863024474406  # Yay!
 
+
+enforce_inversion = True
+
+
+def invert_mb(m, b, total):
+  m_inv = mod_inverse(m, total)
+  b_inv = (-b * m_inv) % total
+  return m_inv, b_inv
 
 def solve_like_part_b(tasks, total_card_count, card_to_track, repeats):
-
-  print('tasks: %s' % tasks)
-  print('total_card_count = %d, card_to_track = %d, repeats = %d' % (
-      total_card_count, card_to_track, repeats))
+  #print('tasks: %s' % tasks)
+  #print('total_card_count = %d, card_to_track = %d, repeats = %d' % (
+  #    total_card_count, card_to_track, repeats))
 
   # Solve m/b and then invert it.
   m, b = solve_mb(tasks, card_to_track, total_card_count)
@@ -378,9 +357,12 @@ def solve_like_part_b(tasks, total_card_count, card_to_track, repeats):
   # mx = y - b
   # x = (y - b) / m
   # x = y*m_inv - b*m_inv
-  m_inv = mod_inverse(m, total_card_count)
-  m = m_inv
-  b = (-b * m_inv) % total_card_count
+  m_inv, b_inv = invert_mb(m, b, total_card_count)
+
+  # Sanity check: double inverse re-derives the orig values.
+  m_inv_inv, b_inv_inv = invert_mb(m_inv, b_inv, total_card_count)
+  assert m == m_inv_inv
+  assert b == b_inv_inv
 
   
   # At this point, the solution is:
@@ -397,19 +379,34 @@ def solve_like_part_b(tasks, total_card_count, card_to_track, repeats):
   #
   # (m^R - 1) * b / (m - 1) + m^R * x
 
-  R = repeats
-  m_R = calc_exponent(m, R, total_card_count)
-  #print('m=%d, b=%d, m_R=%d' % (m, b, m_R))
-  if m == 1:
-    answer = (b * R + m_R * card_to_track) % total_card_count
-  else:
-    answer = ((m_R - 1) * b / (m - 1) + (m_R * card_to_track)) % total_card_count
+  total = total_card_count
+  card = card_to_track
+  answer = solve_part_b_with_mb(m_inv, b_inv, card, total, repeats)
+  if enforce_inversion:
+    inv_answer = solve_part_b_with_mb(m, b, answer, total, repeats)
+    assert inv_answer == card, 'card=%d, ans=%d, inv=%d' % (
+        card, answer, inv_answer)
+
   return answer
 
+def test_solve_like_part_b(tasks, total, card, repeats):
+  try:
+    answer = solve_like_part_b(tasks, total, card, repeats)
+  except:
+    return None
 
-#run_test()
-#run_tests()
-#solve_part_a()
+
+def solve_part_b_with_mb(m, b, card, total, repeats):
+  R = repeats
+  m_R = calc_exponent(m, R, total)
+  #print('card=%d, m=%d, R=%d, b=%d, m_R=%d, total=%d' % (card, m, R, b, m_R, total))
+  if m == 1:
+    answer = (b * R + m_R * card) % total
+  else:
+    inv_denom = mod_inverse(m - 1, total)
+    answer = ((m_R - 1) * b * inv_denom + (m_R * card)) % total
+  return answer
+  
 
 
 def check_calc_exponent():
@@ -426,8 +423,11 @@ def check_part_b_solver():
     total = 10
     results = []
     for i in range(total):
-      results.append(solve_like_part_b(tasks, total, i, repeats))
-    assert results == list(range(total))
+      r = test_solve_like_part_b(tasks, total, i, repeats)
+      results.append(r)
+    for i, r in enumerate(results):
+      if r is not None:
+        assert r == i
 
   # reversing an odd number of times produces the same results.
   tasks = [Task('reverse'),Task('reverse'), Task('reverse')]
@@ -435,8 +435,10 @@ def check_part_b_solver():
     total = 10
     results = []
     for i in range(total):
-      results.append(solve_like_part_b(tasks, total, i, repeats))
-    assert results == list(range(total - 1, -1, -1))
+      results.append(test_solve_like_part_b(tasks, total, i, repeats))
+    for i, r in enumerate(results):
+      if r is not None:
+        assert r == total - 1 - i
 
   # Cutting N times of 1 each.
   tasks = [Task('cut', 1)]
@@ -444,10 +446,11 @@ def check_part_b_solver():
     total = 10
     results = []
     for i in range(total):
-      results.append(solve_like_part_b(tasks, total, i, repeats))
+      results.append(test_solve_like_part_b(tasks, total, i, repeats))
     net_shift = repeats % total
     for i, r in enumerate(results):
-      assert r == (i + net_shift) % total
+      if r is not None:
+        assert r == (i + net_shift) % total
     
   # Shuffle N times
   tasks = [Task('shuffle', 3)]
@@ -455,12 +458,25 @@ def check_part_b_solver():
     total = 10
     results = []
     for i in range(total):
-      results.append(solve_like_part_b(tasks, total, i, repeats))
+      results.append(test_solve_like_part_b(tasks, total, i, repeats))
     net_shift = repeats % total
-    print(results)
-    assert results == list(range(total))
+    for i, r in enumerate(results):
+      if r is not None:
+        assert r == i
+
+  # Cutting N times of 1 each.
+  tasks = [Task('cut', 9), Task('shuffle', 7)]
+  total = 10
+  for enforce in [False, True]:
+    global enforce_inversion
+    enforce_inversion = enforce
+    for repeats in [1, 2]:
+      results = []
+      for i in range(total):
+        results.append(test_solve_like_part_b(tasks, total, i, repeats))
     
   print('PASSED part b test')
+  
 
 
 
@@ -468,8 +484,7 @@ def check_part_b_solver():
 
 check_calc_exponent()
 run_tests()
-
-check_part_b_solver()
 solve_part_a()
+check_part_b_solver()
 solve_part_b()
 
