@@ -27,16 +27,31 @@ import termios
 BEST_ORDER = ['p', 'k', 'z', 'a', 'b', 't', 'x', 'e', 'c', 's', 'u', 'v', 'o', 'w', 'd', 'l', 'f', 'q', 'j', 'm', 'h', 'n', 'r', 'g', 'y', 'i']
 
 
+def add_coords(a, b):
+  return (a[0] + b[0], a[1] + b[1])
+
 
 filename = 'day18.data'
 if len(sys.argv) > 1:
   filename = sys.argv[1]
 input_grid = {}
 with open(filename, 'r') as contents:
+  start_coords = None
   for y, row in enumerate(contents.readlines()):
     for x, c in enumerate(row.strip()):
       input_grid[(x,y)] = c
-
+      if c == '@':
+        start_coords = (x, y)
+  assert start_coords is not None
+  # "Fix" the grid, as required for part B.
+  start_number = 1
+  for y in [-1, 0, 1]:
+    for x in [-1, 0, 1]:
+      c = '#'
+      if abs(x) + abs(y) == 2:
+        c = str(start_number)
+        start_number += 1
+      input_grid[add_coords(start_coords, (x, y))] = c
 
 
 def print_grid(grid):
@@ -58,6 +73,9 @@ def is_door(c):
   return c >= 'A' and c <= 'Z'
 
 
+def is_start(c):
+  return c >= '1' and c <= '4'
+
 def have_all_keys(doors, keys):
   for door in doors:
     assert is_door(door)
@@ -67,10 +85,12 @@ def have_all_keys(doors, keys):
   return True
 
 
-def find_start(grid):
+def find_starts(grid):
+  start_map = {}
   for (x, y), c in grid.items():
-    if c == '@':
-      return (x, y)
+    if is_start(c):
+      start_map[c] = (x, y)
+  return start_map
 
 
 # Returns a map from a key to its coordinates.
@@ -86,10 +106,6 @@ def merge_strings(strs):
   sorted_strs= list(strs)
   sorted_strs.sort()
   return ''.join(sorted_strs)
-
-
-def add_coords(a, b):
-  return (a[0] + b[0], a[1] + b[1])
 
 
 # Represents a path between two locations.
@@ -121,6 +137,7 @@ def calc_distances(grid, start_coords):
 
   paths = []
   start = grid[start_coords]
+  assert start != '#'
 
 
   visited = set([start_coords])
@@ -150,15 +167,15 @@ def calc_distances(grid, start_coords):
 
 
 # Returns a map of paths, keyed by (start,end).
-def find_all_paths(grid, start_coords):
-  starts = list(find_keys(grid).values())
-  starts.append(find_start(grid))
+def find_all_paths(grid, start_map):
+  initial_coords = list(find_keys(grid).values()) + list(start_map.values())
+
 
   edges = {}
-  for start_coords in starts:
-    paths = calc_distances(grid, start_coords)
-    start = grid[start_coords]
-    edges[start] = paths
+  for initial in initial_coords:
+    paths = calc_distances(grid, initial)
+    obj = grid[initial]
+    edges[obj] = paths
   return edges
 
 
@@ -169,15 +186,16 @@ def find_all_paths(grid, start_coords):
 #
 #
 # The cache is keyed by the start location and the keys we have.
-def find_min_steps(grid, edges, cache, loc, keys):
-  cache_key = '%s|%s' % (loc, merge_strings(keys))
+def find_min_steps(grid, edges, cache, locations, keys):
+  cache_key = '%s|%s' % (merge_strings(locations), merge_strings(keys))
   if cache_key in cache:
     return cache[cache_key]
 
   relevant_paths = []
-  for path in edges[loc]:
-    if have_all_keys(path.doors, keys) and path.end not in keys:
-      relevant_paths.append(path)
+  for loc in locations:
+    for path in edges[loc]:
+      if have_all_keys(path.doors, keys) and path.end not in keys:
+        relevant_paths.append(path)
 
   if not relevant_paths:
     # This should only happen if we have all of the keys.
@@ -189,9 +207,14 @@ def find_min_steps(grid, edges, cache, loc, keys):
   min_dist = float("inf")
   for path in relevant_paths:
     assert path.end not in keys
+    loc_index = locations.index(path.start)
+    original_loc = locations[loc_index]
+
+    locations[loc_index] = path.end
     keys.add(path.end)
-    dist = path.distance + find_min_steps(grid, edges, cache, path.end, keys)
+    dist = path.distance + find_min_steps(grid, edges, cache, locations, keys)
     keys.remove(path.end)
+    locations[loc_index] = original_loc
     if dist < min_dist:
       min_dist = dist
 
@@ -205,11 +228,11 @@ def find_min_steps(grid, edges, cache, loc, keys):
 
 def solve_part_a(grid):
   print_grid(grid)
-  start_coords = find_start(grid)
-  edges = find_all_paths(grid, start_coords)
+  start_map = find_starts(grid)
+  edges = find_all_paths(grid, start_map)
 
   cache = {}
-  steps = find_min_steps(grid, edges, cache, '@', set())
+  steps = find_min_steps(grid, edges, cache, ['1', '2', '3', '4'], set())
   print(steps)
 
 solve_part_a(input_grid)
