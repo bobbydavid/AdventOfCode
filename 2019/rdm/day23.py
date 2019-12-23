@@ -4,7 +4,6 @@ import copy
 import intcode
 import time
 import aoc
-import Queue
 import threading
 
 
@@ -19,41 +18,38 @@ class ScopedLock():
     self.lock.release()
 
 
+# Thread-safe way of providing data to the intcode computer.
 class NicInputQueue():
   def __init__(self, router, addr):
-    self.lock = threading.Lock()
+    self.q_lock = threading.Lock()
     self.q = deque()
     self.router = router
     self.addr = addr
 
+    self.q.append(addr)  # Set the address of this queue.
+
+  # Provides data to the computer.
   def get(self):
-    with ScopedLock(self.lock):
+    with ScopedLock(self.q_lock):
       if self.q:
         v = self.q.popleft()
       else:
         v = -1
     if v != -1:
+      # Activity on this address (it's reading).
       self.router.notify_activity(self.addr)
     else:
       time.sleep(0.01) # Try to reduce spin-waiting.
     return v
-
-  def is_idle(self):
-    with ScopedLock(self.lock):
-      return self.idle
-
-  # Sets the initial address for the queue.
-  def write_addr(self, addr):
-    with ScopedLock(self.lock):
-      assert not self.q
-      self.q.append(addr)
     
+  # Queues some data to be sent.
   def write_coords(self, x, y):
-    with ScopedLock(self.lock):
+    with ScopedLock(self.q_lock):
       self.q.append(x)
       self.q.append(y)
 
 
+# Forwards data it receives in batches of 3 to the router.
 class ForwardingQueue():
   def __init__(self, router, addr):
     self.router = router
@@ -70,12 +66,14 @@ class ForwardingQueue():
       del self.buffer[:]
 
 
+# Wraps the computer and handles input/output.
+#
+# Data will be forwarded to the router with the destination address.
 class Nic():
   def __init__(self, router, addr):
     self.router = router
     self.addr = addr
     self.in_q = NicInputQueue(router, addr)
-    self.in_q.write_addr(addr)
     self.out_q = ForwardingQueue(router, addr)
     self.computer = intcode.Computer('day23.data', self.in_q, self.out_q)
 
@@ -86,6 +84,9 @@ class Nic():
     self.computer.run_async()
 
 
+# Runs all 50 NICs.
+#
+# Accepts data, 
 class Router():
   def __init__(self):
     self.nics = []
@@ -129,15 +130,8 @@ class Router():
     return True
 
 
-  def all_stopped(self):
-    for nic in self.nics:
-      if not nic.computer.stopped:
-        return False
-    return True
-
-
   def join_all(self):
-    while not self.all_stopped():
+    while True:
       while not self.all_idle() or self.nat_packet is None:
         time.sleep(0.1)
       # Send the NAT packet to restart the network.
@@ -146,11 +140,11 @@ class Router():
         y = self.nat_packet[1]
         if y in self.y_delivered:
           print('*** Repeated y value delivered: %d ***' % y)
+          sys.exit(0)
         print('Sending NAT coords: %s' % (self.nat_packet,))
         self.y_delivered.add(y)
         self.nics[0].write_coords(x, y)
         self.nat_packet = None
-    print('All computers are stopped.')
 
     
 
