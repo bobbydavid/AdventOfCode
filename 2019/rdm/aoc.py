@@ -27,3 +27,6 @@ def print_grid(grid):
 
 def add_coords(a, b):
   return (a[0]+b[0], a[1]+b[1])
+
+def neighbor_coords(a):
+  return [add_coords(a, d) for d in ((1, 0), (0, 1), (-1, 0), (0, -1))]
