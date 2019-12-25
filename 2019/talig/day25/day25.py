@@ -40,8 +40,7 @@ def take_all(items):
     commands.append('take ' + i)
   return commands
 
-def powerset(iterable):
-  s = iterable
+def powerset(s):
   return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
 def run_commands(commands, queue):
