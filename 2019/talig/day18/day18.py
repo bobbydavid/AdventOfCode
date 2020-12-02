@@ -1,124 +1,140 @@
 import sys
-import copy
-import collections
-import itertools
-import time
 from os import system
-import graph
+from grid import Grid, Point, DIRECTIONS
+from collections import deque, defaultdict
+from copy import deepcopy
 
-class Point:
-  def __init__(self, x, y):
-    self.x = x
-    self.y = y
+INF = 99999
 
-  def __add__(self, o):
-    return Point(self.x + o.x, self.y + o.y)
+class Node:
+  def __init__(self, name, point):
+    self.name = name
+    self.point = point
+    self.edges = []
+    self.prev = None
+    self.require = name.lower()
 
-  def __mul__(self, scalar):
-    return Point(self.x * scalar, self.y * scalar)
-  
-  def __rmul__(self, scalar):
-    return Point(self.x * scalar, self.y * scalar)
-  
   def __repr__(self):
-    return '(%d, %d)' % (self.x, self.y)
-
-  def __eq__(self, o):
-    return self.x == o.x and self.y == o.y
-
-  def __ne__(self, o):
-    return self.x != o.x or self.y != o.y
-
-DIRECTIONS = [Point(0, 1), Point(1, 0), Point(0, -1), Point(-1, 0)]
-
-class Grid:
-  def __init__(self, rows, columns):
-    self.rows = rows
-    self.columns = columns
-    self.grid = []
-    for y in range(rows):
-      self.grid.append(['.'] * columns)
-    print 'Initialized grid with:', len(self.grid), 'rows X', len(self.grid[0]), 'columns'
-
-  def set(self, point, value):
-    c = self.get(point)
-    self.grid[point.y][point.x] = value
-
-  def find(self, char):
-    for y in range(self.rows):
-      for x in range(self.columns):
-        p = Point(x, y)
-        if self.get(p) == char:
-          return p
-
-  def count(self, func):
-    counter = 0
-    for y in self.grid:
-      for x in y:
-        if func(x):
-          counter +=1
-    return counter
+    return self.name
   
-  def get(self, point):
-    if point.x < 0 or point.x >= self.columns or point.y < 0 or point.y >= self.rows:
-      return False
-    return self.grid[point.y][point.x]
+  def location(self):
+    return str(self.point)
 
-  def render(self):
-    _ = system('clear')
-    for y in self.grid:
-      print ''.join(y)
+class Edge:
+  def __init__(self, node, dist):
+    self.node = node
+    self.visited = False
+    self.dist = dist
 
-
-def make_grid(filename):
-  tunnels = []  
+def get_grid(filename):
   f = open(filename)
-  for line in f.readlines():
-    tunnels.append([c for c in line.strip()])
+  content = [line.strip() for line in f.readlines()]
   f.close()
 
-  grid = Grid(len(tunnels), len(tunnels[0]))
-  grid.grid = tunnels # This is already a grid, no need to set anything right now.
+  for i in range(len(content)):
+    content[i] = [x for x in list(content[i])]
   
-  grid.render()
-  return grid
+  g = Grid(len(content), len(content[0]))
+  g.grid = content
+  #g.build_grid_graph()
 
-def bfs_grid(grid, current):
-  queue = [current.point_location]
-  discovered = {current.location():0}
-  nodes = {}
-  while queue:
-    v = queue.pop(0)
-    for direction in DIRECTIONS:
-      next_loc = v + direction
-      if not discovered.get(str(next_loc), False):
-        discovered[str(next_loc)] = discovered[str(v)] + 1
-        c = grid.get(next_loc) 
-        if c != '#': 
-          queue.append(next_loc)
-        if c not in ['#','.','@', False]:
-          nodes[c] = discovered[str(next_loc)]
-  return nodes
+  return g
 
-def build_graph(grid):
-  graph1 = graph.Graph()
-  # Add all nodes.
-  for y in range(grid.rows):
-    for x in range(grid.columns):
-      location = Point(x, y)
-      c = grid.get(location)
-      if c != '#' and c != '.':
-        graph1.add_node(location, grid.get(location))
+def bfs(start, maze, maze_graph):
+  q = deque()
+  q.append(start.point)
+  distance = defaultdict(int)
+  visited = defaultdict(int)
+  print ('Starting BFS with node', start)
+  while q:
+    current = q.popleft()
+    for d in DIRECTIONS:
+      n = current + d
+      if str(n) in visited:
+        continue
+      value = maze.get(n)
+      if value == '#':
+        continue
+      q.append(n)
+      distance[str(n)] = distance[str(current)] + 1
+      visited[str(n)] = 0
+      # This will skip everything except a-zA-Z, incl. @
+      # Also skip the self edge. 
+      if value.isalpha() and value != start.name:
+        # Add an edge from the starting point.
+        next_node = maze_graph[value]
+        next_node.name = value
+        start.edges.append(Edge(next_node, distance[str(n)]))
 
-  for current in graph1.nodes.values():
-    nodes = bfs_grid(grid, current)
-    for n in nodes:
-      # Avoid self-edges.
-      if n != current.value:
-        node = graph1.keys[n] if n.islower() else graph1.doors[n]
-        current.add_real_edge(node, nodes[n])
-  graph1.build_dependency_graph()
-  return graph1
+def get_nodes(maze):
+  maze_graph = {}
+  for y in range(maze.rows):
+    for x in range(maze.columns):
+      loc = Point(x, y)
+      v = maze.get(loc)
+      if v.isalpha() or v == '@':
+        maze_graph[v] = Node(v, loc)
+  return maze_graph
+
+def build_graph(g):
+  maze_graph = get_nodes(g)
+  # Order doesn't matter, build the graph. 
+  k = maze_graph.values()
+  for v in k:
+    bfs(v, g, maze_graph)
+  return maze_graph
+
+def recurse(edge, collected_keys, path, path_length, paths, total_keys=26):
+  node = edge.node
+  if node.require != node.name and node.require not in collected_keys:
+    path_length = INF
+    path.append(node)
+    # don't append to paths... 
+    return
+  else:
+    print('in here')
+    collected_keys.add(node.name)
+    path_length += edge.dist
+    print path_length
+    path.append(node)
+    if len(collected_keys) == total_keys:
+      print ('All keys!')
+      paths.append((path, path_length))
+    for k in collected_keys:
+      # Remove all edges to doors with keys that we have. We will walk right through them.
+      node.edges = filter(lambda x: x.node.name != k.upper(), node.edges)
+    for e in node.edges:
+      if not e.visited and e.node != node.prev:
+        e.node.prev = node
+        print ('Recursion: Looking at', e.node)
+        recurse(e, deepcopy(collected_keys), deepcopy(path), path_length, paths, total_keys)  
+        e.visited = True
+
+def find_optimal_path(maze_graph):
+  # Now we have the fully connected graph with distances. 
+  start = maze_graph['@']
+  total_keys = sum([1 for k in maze_graph if k.islower()])
+  print('Total keys: ', total_keys)
+  collected_keys = set()
+  paths = []
+  for e in start.edges:
+    print ('Looking at', e.node)
+    recurse(e, collected_keys, [], 0, paths, total_keys)
+    e.visited = True
+  min_path = INF
+  best_path = []
+  for p in paths:
+    if p[1] < min_path: 
+      best_path = p[0]
+      min_path = p[1]
+  return best_path, min_path
+
+def everything_together(filename):
+  maze = get_grid(filename)
+  maze_graph = build_graph(maze)
+  best_path, min_path = find_optimal_path(maze_graph)
+  print( 'Shortest path is %d steps long: %s' % (min_path, best_path))
+  return min_path
 
 def expect(expected, actual):
   if expected == actual:
@@ -134,40 +150,20 @@ def test():
     'test4.data': ('acfidgbeh', 81)
   }
   for t in tests:
-    grid = make_grid(t)
-    graph1 = build_graph(grid)
-    print 'Total Keys', graph1.total_keys
-    graph1.build_dependency_graph()
-    #graph1.dijkstra()
-    for n in  graph1.keys:
-      k = graph1.keys[n]
-      print 'Key', k.value, 'dist:', k.dist
-
-    #key = max(graph1.keys, key=lambda x: graph1.keys[x].dist)
-    #moves = graph1.keys[key].dist
-    moves = graph1.compute_path_length([x for x in tests[t][0]])
+    moves = everything_together(t)
     expect(tests[t][1], moves)
 
 def main():
-  if (len(sys.argv) < 2):
+  if len(sys.argv) < 2:
     test()
-    print 'Missing data file!'
-    print 'Usage: python [script] [data]'
-    sys.exit(1)
+    print('Missing data file. Usage:')
+    print('python3 day18.py <file.data>')
+    sys.exit(0)
 
-  grid = make_grid(sys.argv[1])
-  graph1 = build_graph(grid)
-  print 'Total Keys', graph1.total_keys
-  graph1.build_dependency_graph()
-  for node in graph1.nodes.values():
-    print node
-  # Bob's input
-  moves = graph1.compute_path_length(['p', 'k', 'a', 'z', 't', 'b', 'c', 'e', 'x', 'd', 'w', 'o', 'v', 'u', 's', 'l', 'h', 'm', 'j', 'q', 'f', 'n', 'r', 'g', 'y', 'i'])
-  print 'Total moves:', moves
-  #toposort = graph1.build_dependency_graph()
-  #start = grid.find('@')
-  #print 'Starting point: ', start
+  # (a) => 4204
+  maze_grid, nodes = get_grid(sys.argv[1])
+  build_graph(maze_grid, nodes)
+
   
- 
 if __name__== "__main__":
   main()
