@@ -133,10 +133,10 @@ def main():
   TestPart2()
 
   print('Day', DAY, ' part 1')
-  print('There are ', CountValid(passports, AllMandatoryFieldsExist), ' valid passports.') # 259 for my input
+  print('There are ', CountValid(passports, AllMandatoryFieldsExist), ' valid passports.') # 182 for my input
 
   print('Day', DAY, ' part 2')
-  print('There are ', CountValid(passports, IsValid), ' valid passports.') # 259 for my input
+  print('There are ', CountValid(passports, IsValid), ' valid passports.') # 109 for my input
 
 
 
