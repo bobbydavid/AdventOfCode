@@ -10,27 +10,14 @@ DAY = 5
 
 def GetSeatData(line):
   # Convert to binary
-  binary = line.replace('F', '0')
-  binary = binary.replace('B', '1')
-  binary = binary.replace('L', '0')
-  binary = binary.replace('R', '1')
-  row = int(binary[:7], 2)
-  column = int(binary[7:], 2)
-  print(row, column)
-  seat_id = row * 8 + column
-  return row, column, seat_id
+  binary = line.translate(str.maketrans('FBLR','0101'))
+  seat_id = int(binary, 2)
+  return seat_id
   
 
 def ParseSeatData(lines):
-  max_id = 0 
-  seats = {}
-  for line in lines:
-    row, column, seat_id = GetSeatData(line)
-    seats[seat_id] = True
-    if seat_id > max_id:
-      print('Found max!' , row, column, seat_id)
-      max_id = seat_id
-  return seats, max_id 
+  translation = str.maketrans('FBLR','0101')
+  return sorted([int(x.translate(translation), 2) for x in lines])
 
 def FindGap(seats, max_seat):
   # Find a missing seat id where +1 and -1 exist.
@@ -52,7 +39,8 @@ def main():
   lines = [x.strip() for x in lines]
   f.close()
   
-  seats, max_id = ParseSeatData(lines)
+  seats = ParseSeatData(lines)
+  max_id = seats[-1]
   print('Day', DAY, ' part 1')
   print('The maximal seat id is: ', max_id)
 
