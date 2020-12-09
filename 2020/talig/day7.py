@@ -6,7 +6,7 @@ import re
 import collections
 import copy
 
-DAY = 6
+DAY = 7
 MAP_TO_RE = r'(\d+) (.*?) bags?[,.]'
 MAP_FROM = r'^(.*?) bags contain.*?$'
 
