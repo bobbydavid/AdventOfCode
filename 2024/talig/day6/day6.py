@@ -23,7 +23,7 @@ SIGNS = ['^', '>','v','<']
 STEPS = [Point(0, -1), Point(1, 0), Point(0, 1), Point(-1, 0)]
  
     
-
+VISITED = set(['X', '|','-','+'])
 
 class Board():
 
@@ -35,6 +35,9 @@ class Board():
 
     self.findGuard()
     self.visited = 1
+    self.turns = []
+    self.mark = '|'
+    self.just_turned = False
 
   def findGuard(self):
     for r in range(len(self.board)):
@@ -48,10 +51,16 @@ class Board():
 
   def turnRight(self):
     self.guard = (self.guard + 1) % len(SIGNS) 
+    self.turns.append(self.guard_location)
+    self.just_turned = True
+    if self.mark == '|': 
+      self.mark = '-'
+    else:
+      self.mark = '|'
 
   def isVisited(self, n):
-    return self.get(n) == 'X'
- 
+    return self.get(n) in VISITED
+
   def isOutOfRange(self, n):
     return n.y < 0 or n.x < 0 or n.y >= len(self.board) or n.x >= len(self.board[0])
 
@@ -66,12 +75,16 @@ class Board():
     return self.visit(self.guard_location, n)   
 
   def isObstacle(self, p):
-    return self.get(p) == '#'
+    return self.get(p) == '#' # 'O']
 
   def visit(self,p, n):
     if not self.isVisited(n):
       self.visited += 1
-    self.board[p.y][p.x] = 'X'
+    sign = self.mark
+    if self.just_turned:
+      sign = '+'
+      self.just_turned = False
+    self.board[p.y][p.x] = sign
     self.board[n.y][n.x] = SIGNS[self.guard]
     self.guard_location = n
     return True
@@ -92,7 +105,8 @@ class Board():
 def traverse(board):
   cont = True
   while board.advanceOne():
-    print(board.countVisited())
+    continue
+
   
 def main():
   f = open(sys.argv[1])
@@ -100,10 +114,9 @@ def main():
   f.close()
   traverse(b)
   print(b)
-
-
   
-  #print("Result part1:", total)
+  
+  print("Result part1:", b.countVisited())
   #print("Result part2:", total2)
 
 
